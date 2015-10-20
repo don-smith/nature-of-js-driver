@@ -1,8 +1,8 @@
 import $ from 'jquery';
 
 const baseUrl = 'http://localhost:5000/api/v1';
-let turn = 0;
-const turns = 10;
+let viewTurn = 0;
+let maxTurn = 0;
 const rangers = "abcdefghij".split('');
 const wombats = ['gershwin', 'coltrane', 'thelonious', 'ellington', 'basie'];
 
@@ -11,8 +11,9 @@ $(function() {
   window.setInterval(updateDisplay, 2000);
   seedArea().catch(showError);
   $('#forward').click(next);
-  //$('#back').click(prev().then(updateDisplay()).catch(showerror));
+  $('#back').click(prev);
   $('#reset').click(reset);
+  $('#repopulate').click(seedArea);
 
 });
 
@@ -36,6 +37,15 @@ function reset() {
     ));
   }
 
+  requests.push(Promise.resolve(
+    $.ajax({
+      url: `${baseUrl}/reset`,
+      type: 'GET'
+    })
+  ));
+
+  viewTurn = 0;
+  maxTurn = 0;
   return Promise.all(requests);
 }
 
@@ -72,10 +82,10 @@ function showError(err) {
   $('#error').html(JSON.stringify(err));
 }
 
-function updateDisplay(me = "") {
+function updateDisplay() {
   return Promise.resolve(
     $.ajax({
-      url: `${baseUrl}/areamap/${me}`,
+      url: `${baseUrl}/areamap?turn=${viewTurn}`,
       type: 'GET',
       cache: false
     }).then(data => {
@@ -88,6 +98,11 @@ function updateDisplay(me = "") {
 }
 
 function next() {
+  if (viewTurn < maxTurn) {
+    viewTurn++;
+    return;
+  }
+
   let requests = [];
 
   $.ajax({
@@ -127,10 +142,16 @@ function next() {
           })
         ));
       }
+      maxTurn++;
+      viewTurn++;
     }
   });
 
   return Promise.all(requests);
+}
+
+function prev() {
+  viewTurn = (viewTurn > 0) ? viewTurn - 1 : 0;
 }
 
 function constructMove(mammal) {
